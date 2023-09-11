@@ -32,6 +32,7 @@ The lambda function hydrates Buy with Prime events, parsing `orderId`, sends `or
     - (Optional) `CLIENT_ID` and `CLIENT_SECRET`: When you have your client ID after onboarding process completed.  
 3. Run cdk commands.
 ```
+npm i
 cdk bootstrap
 cdk deploy
 ```
