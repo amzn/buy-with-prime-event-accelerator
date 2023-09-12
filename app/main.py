@@ -73,7 +73,7 @@ def query_api(order_id):
             response_data = response.read()
             response_text = response_data.decode('utf-8')
             # If the request is successful, create a json file and call write_item function. 
-            if 'error' in str(response_data):
+            if response.status != 200 or 'errors' in str(response_data):
                 print("response", response.status, response_text)
             else:
                 # The file name is set as the timestamp. 
