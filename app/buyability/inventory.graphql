@@ -1,0 +1,16 @@
+query inventoryItem {
+  inventoryItem(
+    inventoryItemId: "value-received-from-inventory"
+  ) {
+    inventoryItemId
+    buyableQuantity {
+      unit
+      amount
+    }
+    mappingProduct {
+      externalId {
+        value
+      }
+    }
+  }
+}

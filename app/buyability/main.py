@@ -31,38 +31,43 @@ def get_secret():
         raise e
 
     # Decrypts secret using the associated KMS key.
-    secret = get_secret_value_response['SecretString'] 
+    secret = get_secret_value_response['SecretString']
     CLIENT_ID = secret.client_id
-    CLIENT_SECRET = secret.client_secret 
-
+    CLIENT_SECRET = secret.client_secret
+    
 # Event hydration - Parsing orderId from the event payload
 def lambda_handler(event, context):
     message = event['Records'][0]['body']
     json_message = json.loads(message)
     print(json_message)
-    order_id=json_message['detail']['orderIdentifier']['orderId']
     print("=====================") 
-    print("order ID is", order_id)
-    query_api(order_id) 
+    id_type = json_message['detail']['item']['identifierType']
+    if id_type == "itemId":
+        item_id = json_message['detail']['item']['identifierValue']
+        print("Item ID is", item_id)
+        query_api(item_id)
+    else:
+        print("The identifierType is ", id_type)
+        print("id_type is not itemID. Please check the event payload.")
 
-def query_api(order_id):
+
+def query_api(item_id):
     url = environ['MOCK_BWP_API']
-    
     headers = {
         'Authorization': 'bearer custom-authorized', 
         'X-Omni-InstallationId': 'i34242', 
         'Content-Type': 'application/json'
     }
-    # Road singleOrder query
-    file_name = "singleOrder.graphql"
+    # Road item query
+    file_name = "itemByID.graphql"
     f = open(file_name, 'r')
-    single_order = f.read()
-    print("singleOrder query loaded.")
+    item_query = f.read()
+    print("item query is loaded.")
     f.close()
 
-    query = single_order
-    # Setting order_id from the event payload as a variable
-    variables = {"orderId": order_id}
+    query = item_query
+    # Setting item ID from the event payload as a variable
+    variables = {"itemId": item_id} # need to change
     print("variables:", variables)
     data = json.dumps({"query": query, "variables": variables}).encode('utf-8')
 
@@ -76,8 +81,8 @@ def query_api(order_id):
             if response.status != 200 or 'errors' in str(response_data):
                 print("response", response.status, response_text)
             else:
-                # The file name is set as the timestamp. 
-                file_name = str(datetime.datetime.now())[:-7]
+                # The file name is set as the timestamp.
+                file_name = "item_"+str(datetime.datetime.now())[:-7]
                 file = json.loads(response_text)
                 write_item(file_name, file)
             return json.loads(response_text)

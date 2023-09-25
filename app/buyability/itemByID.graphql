@@ -1,0 +1,48 @@
+query ItemByID ($itemId: String!){
+  item(identifier: {space: ID, value: $itemId}) {
+    id
+    ... on BwPProduct {
+      id
+      catalogId
+      options {
+          id
+          value
+      }
+      relationships {
+        ... on AliasRelationship {
+          __typename
+          relationshipType
+          target
+        }
+        ... on VariantRelationship {
+          __typename
+          relationshipType
+          targetId
+          attributeDiscriminators {
+            variantAttributeId
+            variantAttributeValue
+          }
+        }
+      }
+      sku
+      status
+      title
+      url
+      isPrimeIntended
+      description
+      media {
+        altText
+        displayReadyUrl
+        label
+        position
+        type
+      }
+      price {
+        currentPrice {
+          amount
+          currencyCode
+        }
+      }
+    }
+  }
+}
