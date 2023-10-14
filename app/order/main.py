@@ -31,9 +31,9 @@ def get_secret():
         raise e
 
     # Decrypts secret using the associated KMS key.
-    secret = get_secret_value_response['SecretString'] 
+    secret = get_secret_value_response['SecretString']
     CLIENT_ID = secret.client_id
-    CLIENT_SECRET = secret.client_secret 
+    CLIENT_SECRET = secret.client_secret
 
 # Event hydration - Parsing orderId from the event payload
 def lambda_handler(event, context):
@@ -77,7 +77,7 @@ def query_api(order_id):
                 print("response", response.status, response_text)
             else:
                 # The file name is set as the timestamp. 
-                file_name = str(datetime.datetime.now())[:-7]
+                file_name = "order_"+str(datetime.datetime.now())[:-7]
                 file = json.loads(response_text)
                 write_item(file_name, file)
             return json.loads(response_text)

@@ -1,0 +1,11 @@
+query buyability ($item_id: ID){
+  buyability(item: {ExternalId: "", 
+  ID: $item_id, 
+  SKU: "", 
+  space: ID, 
+  value: "", 
+  mSKU: {marketplaceId: "", value: ""}}, 
+  poaShopperInstanceId: "") {
+    status
+  }
+}

@@ -1,0 +1,17 @@
+query inventoryItem ($inventoryItemId: ID!){
+  inventoryItem(inventoryItemId: $inventoryItemId) {
+    buyableQuantity {
+      amount
+      unit
+    }
+    inventoryItemId
+    mappingProduct {
+      externalId
+      id
+      isPrimeIntended
+      sku
+      url
+    }
+  }
+}
+
