@@ -134,7 +134,7 @@ export class EventAcceleratorStack extends cdk.Stack {
     const buyabilityRule = new cdk.aws_events.Rule(this, 'BuyabilityEventRule', {
       eventBus: eventBus,
       eventPattern: {
-        "detailType": ["santos.buyability.status.change"]
+        "detailType": ["santos.buyability.status.change", "INVENTORY_AVAILABILITY_CHANGED"] // detail-type?
         // "detail-type": ["BUYABILITY_EVENT"]
       },
       targets: [new cdk.aws_events_targets.SqsQueue(buyabilityQueue, {

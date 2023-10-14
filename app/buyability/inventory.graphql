@@ -1,16 +1,16 @@
-query inventoryItem {
-  inventoryItem(
-    inventoryItemId: "value-received-from-inventory"
-  ) {
-    inventoryItemId
+query inventoryItem ($inventoryItemId: ID!){
+  inventoryItem(inventoryItemId: $inventoryItemId) {
     buyableQuantity {
-      unit
       amount
+      unit
     }
+    inventoryItemId
     mappingProduct {
-      externalId {
-        value
-      }
+      externalId
+      id
+      isPrimeIntended
+      sku
+      url
     }
   }
 }

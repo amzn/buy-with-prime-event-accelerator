@@ -18,7 +18,8 @@ The event hydrator checks if the event has `identifierType` as an `itemId`. If s
 2. Prepare your S3 bucket to store Buy with Prime data. 
 
 ## Architecture
-![](static/event-accelerator-3.png)
+![](static/event-accelerator-4.png)
+
 - AWS Secrets Manager
 - Amazon EventBridge
 - Amazon SQS and Dead Letter Queue
@@ -54,11 +55,14 @@ curl --location --request POST '{Mock_Event_API_endpoint/prod}/put-event/order?e
 
 curl --location --request POST '{Mock_Event_API_endpoint/prod}/put-event/order?event-type=order_updated'
 
-curl --location --request POST '{Mock_Event_API_endpoint/prod}/put-event/order?event-type=order_refund_success'
+curl --location --request POST '{Mock_Event_API_endpoint/prod}/put-event/order?event-type=refund_success'
 ```
-### Buyability event
+### Buyability and Inventory event
 ```
 curl --location --request POST '{Mock_Event_API_endpoint/prod}/put-event/buyability?event-type=buyability'
+
+curl --location --request POST '{Mock_Event_API_endpoint/prod}/put-event/inventory?event-type=inventory'
+
 ```
 
 ## Amazon EventBridge event patterns
@@ -79,9 +83,51 @@ The CDK has sample event pattern to filter Buy with Prime event types. You can u
 ### Buyability event rule 
 ```
     eventPattern: {
-    "detailType": ["santos.buyability.status.change"]
+    "detailType": ["santos.buyability.status.change", "INVENTORY_AVAILABILITY_CHANGED"]
     },
 ```
+
+### Buyability and Inventory logic
+![](static/inventory.png)
+
+The lambda function looks at the value of `detail-type` in the event payload to determine the event type.  If the value is `INVENTORY_AVAILABILITY_CHANGED`, it extracts `inventoryItemId` from the event payload, and queries inventory with it. Or, if the value is `santos.buyability.status.change`, it extracts `itemId` instead, and queries buyability.
+
+#### Query inventory
+The [inventory query](app/buyability/inventory.graphql) provides the **buyable quantity,** as well as the **external ID** and **SKU** of the mapping product. The following is an example of an inventory query response.
+
+```
+{
+    "data": {
+        "inventoryItem": {
+            "buyableQuantity": {
+                "amount": 10,
+                "unit": "DAYS"
+            },
+            "inventoryItemId": "w6ibvyca8tmh83",
+            "mappingProduct": {
+                "externalId": "93c711ed-517d-4e45-873f-b615dc97dd6a",
+                "id": "w6ibvyca8tmh83",
+                "isPrimeIntended": true,
+                "sku": "8f72b379-b669-46a5-a37d-7b2e07b227a4",
+                "url": "https://testurl"
+            }
+        }
+    }
+}
+```
+#### Query buyability
+The [buyability query](app/buyability/buyability.graphql), on the other hand, takes a variety of arguments, including ID, external ID, SKU, and mSKU, and returns a buyable status. This sample shows an example of using an ID. The following is an example of a buyability query response.
+
+```
+{
+    "data": {
+        "buyability": {
+            "status": "true"
+        }
+    }
+}
+```
+
 
 ## GraphQL Error Handling
 

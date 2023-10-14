@@ -4,95 +4,144 @@ from os import environ
 import urllib.request
 import boto3
 from botocore.exceptions import ClientError
+from requests.requests import Requests
 
 # Use this code snippet in your app.
 # If you need more information about configurations
 # or implementing the sample code, visit the AWS docs:
 # https://aws.amazon.com/developer/language/python/
 
-# secrets manager
-def get_secret():
-    secret_name = environ['BWP_SECRET_NAME']
-    region_name = environ['AWS_REGION']
-    # Create a Secrets Manager client
-    session = boto3.session.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name=region_name
-    )
+url = environ['MOCK_BWP_API'] 
+headers = {
+    'Authorization': 'bearer custom-authorized', 
+    'X-Omni-InstallationId': 'i34242', 
+    'Content-Type': 'application/json'
+}
 
-    try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secret_name
-        )
-    except ClientError as e:
-        # For a list of exceptions thrown, see
-        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
-        raise e
-
-    # Decrypts secret using the associated KMS key.
-    secret = get_secret_value_response['SecretString']
-    CLIENT_ID = secret.client_id
-    CLIENT_SECRET = secret.client_secret
     
 # Event hydration - Parsing orderId from the event payload
 def lambda_handler(event, context):
     message = event['Records'][0]['body']
     json_message = json.loads(message)
     print(json_message)
-    print("=====================") 
-    id_type = json_message['detail']['item']['identifierType']
-    if id_type == "itemId":
-        item_id = json_message['detail']['item']['identifierValue']
-        print("Item ID is", item_id)
-        query_api(item_id)
-    else:
-        print("The identifierType is ", id_type)
-        print("id_type is not itemID. Please check the event payload.")
+    print("=====================")
+    event_type = json_message['detail-type']
+    print("Event type: ", event_type)
+    if event_type == "INVENTORY_AVAILABILITY_CHANGED":
+        inventory_item_id = json_message['detail']['inventoryItemId']
+        # query inventory
+        query_inventory(url=url, headers=headers, inventory_item_id=inventory_item_id)
+    if event_type == "santos.buyability.status.change":
+        id_type = json_message['detail']['item']['identifierType']
+        if id_type == "itemId":
+            item_id = json_message['detail']['item']['identifierValue']
+            # query_item(url=url, headers=headers, item_id=item_id)
+            query_buyability(url=url, headers=headers, item_id=item_id)
+        else:
+            print("The identifierType is ", id_type)
+            print("id_type is not itemID. Please check the event payload.")
 
 
-def query_api(item_id):
-    url = environ['MOCK_BWP_API']
-    headers = {
-        'Authorization': 'bearer custom-authorized', 
-        'X-Omni-InstallationId': 'i34242', 
-        'Content-Type': 'application/json'
-    }
-    # Road item query
-    file_name = "itemByID.graphql"
+def query_inventory(url, headers, inventory_item_id):
+    # Road inventory query
+    file_name = "inventory.graphql"
     f = open(file_name, 'r')
-    item_query = f.read()
-    print("item query is loaded.")
+    inventory_query = f.read()
+    print("inventory query is loaded.")
     f.close()
-
-    query = item_query
-    # Setting item ID from the event payload as a variable
-    variables = {"itemId": item_id} # need to change
-    print("variables:", variables)
+    
+    query = inventory_query
+    # Setting inventory item ID from the event payload as a variable
+    variables = {"inventoryItemId": inventory_item_id}
+    print("inventory item ID is", inventory_item_id)
     data = json.dumps({"query": query, "variables": variables}).encode('utf-8')
 
     request = urllib.request.Request(url, data=data, headers=headers, method='POST')
     
-    try:
-        with urllib.request.urlopen(request) as response:
-            response_data = response.read()
-            response_text = response_data.decode('utf-8')
-            # If the request is successful, create a json file and call write_item function. 
-            if response.status != 200 or 'errors' in str(response_data):
-                print("response", response.status, response_text)
-            else:
-                # The file name is set as the timestamp.
-                file_name = "item_"+str(datetime.datetime.now())[:-7]
-                file = json.loads(response_text)
-                write_item(file_name, file)
-            return json.loads(response_text)
-    except urllib.error.URLError as e:
-        print("HTTP error:", e)
-        return None
+    # Create an object of class Requests.
+    requests_instance = Requests(request)
+    response_data = requests_instance.urllib_request()
+    print("response_data's type?", type(response_data))
 
-# Save the json file in Amazon S3 bucket.
-def write_item(file_name, file):
-    s3 = boto3.client('s3')
-    bucket = environ['DATA_STORE_BUCKET']
-    encode_file = bytes(json.dumps(file).encode('UTF-8'))
-    s3.put_object(Bucket=bucket, Key=file_name, Body=encode_file)
+    if response_data is not None:
+        response_json = json.dumps(response_data)
+        print(response_json)
+        
+        # Extract External ID from the response.
+        external_id = response_data['data']['inventoryItem']['mappingProduct']['externalId']
+        print("External ID is ", external_id)
+        print("=======================")
+        buyable_amount = response_data['data']['inventoryItem']['buyableQuantity']['amount']
+        buyable_unit = response_data['data']['inventoryItem']['buyableQuantity']['unit']
+        print("Buyable Quantity: ", str(buyable_amount) + " " + buyable_unit)
+        print("SKU: ", response_data['data']['inventoryItem']['mappingProduct']['sku'])
+        print("Prime Intention: ", response_data['data']['inventoryItem']['mappingProduct']['isPrimeIntended'])  
+
+    else:
+        print("Request failed.")
+       
+
+def query_buyability(url, headers, item_id):
+    # Road buyability query
+    file_name = "buyability.graphql"
+    f = open(file_name, 'r')
+    buyability_query = f.read()
+    print("buyability query is loaded.")
+    f.close()
+
+    query = buyability_query
+    # Setting item ID from the event payload as a variable
+    variables = {"ID": item_id}
+    print("Item ID is", item_id)
+    data = json.dumps({"query": query, "variables": variables}).encode('utf-8')
+
+    request = urllib.request.Request(url, data=data, headers=headers, method='POST')
+   
+    # Translate Item ID to SKU
+    query_item(url=url, headers=headers, item_id=item_id)
+    
+    # Create an object of class Requests.
+    requests_instance = Requests(request)
+    response_data = requests_instance.urllib_request()
+
+    if response_data is not None:
+        response_json = json.dumps(response_data)
+        print(response_json)
+        print("Buyability status: ", response_data['data']['buyability']['status'])
+    else:
+        print("Request failed.")   
+
+    
+def query_item(url, headers, item_id):    
+    item_query = """
+    query ItemByID ($itemId: String!){
+      item(identifier: {space: ID, value: $itemId}) {
+        id
+        ... on BwPProduct {
+          id
+          catalogId
+          sku
+        }
+      }
+    }
+    """
+
+    # Setting item ID from the event payload as a variable
+    variables = {"itemId": item_id}
+    print("variables:", variables)
+    data = json.dumps({"query": item_query, "variables": variables}).encode('utf-8')
+
+    request = urllib.request.Request(url, data=data, headers=headers, method='POST')
+    
+    # Create an object of class Requests.
+    requests_instance = Requests(request)
+    response_data = requests_instance.urllib_request()
+
+    if response_data is not None:
+        response_json = json.dumps(response_data)
+        print(response_json)
+        item_id = response_data['data']['item']['id'] # double check
+        sku = response_data['data']['item']['sku']
+        print("Item ID is ", item_id, " and its sku is ", sku)
+    else:
+        print("Request failed.")
