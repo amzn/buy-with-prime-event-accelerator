@@ -14,4 +14,3 @@ query inventoryItem ($inventoryItemId: ID!){
     }
   }
 }
-

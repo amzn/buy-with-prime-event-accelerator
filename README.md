@@ -19,6 +19,7 @@ The event hydrator checks if the event has `identifierType` as an `itemId`. If s
 
 ## Architecture
 ![](static/event-accelerator-4.png)
+
 - AWS Secrets Manager
 - Amazon EventBridge
 - Amazon SQS and Dead Letter Queue
@@ -61,6 +62,7 @@ curl --location --request POST '{Mock_Event_API_endpoint/prod}/put-event/order?e
 curl --location --request POST '{Mock_Event_API_endpoint/prod}/put-event/buyability?event-type=buyability'
 
 curl --location --request POST '{Mock_Event_API_endpoint/prod}/put-event/inventory?event-type=inventory'
+
 ```
 
 ## Amazon EventBridge event patterns
