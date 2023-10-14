@@ -60,7 +60,7 @@ curl --location --request POST '{Mock_Event_API_endpoint/prod}/put-event/order?e
 ```
 curl --location --request POST '{Mock_Event_API_endpoint/prod}/put-event/buyability?event-type=buyability'
 
-curl --location --request POST 'https://lni6up362h.execute-api.us-west-1.amazonaws.com/prod/put-event/inventory?event-type=inventory'
+curl --location --request POST '{Mock_Event_API_endpoint/prod}/put-event/inventory?event-type=inventory'
 ```
 
 ## Amazon EventBridge event patterns
